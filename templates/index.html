@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>To-Do App</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #e3f2fd; }
+        h1 { color: #1976d2; text-align: center; }
+        h2 { color: #42a5f5; margin-top: 20px; }
+        form { display: flex; gap: 10px; margin-bottom: 20px; }
+        input[type="text"], input[type="number"] { padding: 8px; font-size: 16px; border: 1px solid #90caf9; border-radius: 4px; flex: 1; background-color: #fff; }
+        input[type="submit"] { padding: 8px 16px; background-color: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        input[type="submit"]:hover { background-color: #1976d2; }
+        ul { list-style: none; padding: 0; }
+        li { display: flex; align-items: center; background-color: white; padding: 10px; margin-bottom: 5px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .done { background-color: #bbdefb; color: #666; }
+        input[type="checkbox"] { margin-right: 10px; }
+        .message { color: #388e3c; text-align: center; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>To-Do List</h1>
+    {% if message %}
+        <p class="message">{{ message }}</p>
+    {% endif %}
+    <p>Your source name: <strong>{{ owner_source }}</strong></p>
+    <form method="POST" action="/">
+        <input type="text" name="source" placeholder="Set your source name" value="{{ owner_source }}" required>
+        <input type="submit" name="set_source" value="Update Name">
+    </form>
+    <p>Share this code: <strong>{{ invite_code }}</strong></p>
+    <p>They can add/view at: <a href="http://192.168.0.243:5000/add/{{ invite_code }}">http://192.168.0.243:5000/add/{{ invite_code }}</a></p>
+    <form method="POST" action="/">
+        <input type="submit" name="regenerate" value="Regenerate Invite Code">
+    </form>
+    <form method="POST" action="/">
+        <input type="text" name="task" placeholder="Add a task" required>
+        <input type="number" name="priority" min="1" max="5" placeholder="Priority (1-5)" required>
+        <input type="number" name="est_time" min="1" placeholder="Est. Time (minutes)" required>
+        <input type="submit" value="Add Task">
+    </form>
+    <h2>Active Tasks</h2>
+    <ul>
+        {% for task, priority, est_time, pred_time, completed, index, created_at, source in active_tasks %}
+            <li>
+                <form method="POST" action="/" style="display:inline;">
+                    <input type="checkbox" name="toggle" value="{{ index }}"
+                        {% if completed %}checked{% endif %}
+                        onchange="this.form.submit()">
+                </form>
+                {{ task }} (Priority: {{ priority }}, Your Est.: {{ est_time }} min, ML Predict: {{ pred_time|round(1) }} min, Added: {{ created_at[:10] }}, By: {{ source }})
+            </li>
+        {% endfor %}
+    </ul>
+    <h2>Done Tasks</h2>
+    <ul>
+        {% for task, priority, est_time, pred_time, completed, index, created_at, source in done_tasks %}
+            <li class="done">
+                {{ task }} (Priority: {{ priority }}, Your Est.: {{ est_time }} min, ML Predict: {{ pred_time|round(1) }} min, Added: {{ created_at[:10] }}, By: {{ source }})
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
