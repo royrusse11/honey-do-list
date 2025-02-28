@@ -6,11 +6,14 @@ import numpy as np
 from datetime import datetime, timedelta
 import uuid
 
+# Initialize Flask app
 app = Flask(__name__)
 
-TASKS_FILE = 'tasks.json'
-INVITE_FILE = 'invite.json'
+# Define file paths for tasks and invite data (specific to Render's environment)
+TASKS_FILE = '/app/data/tasks.json'
+INVITE_FILE = '/app/data/invite.json'
 
+# Function to load tasks from file with error handling
 def load_tasks():
     print("Loading tasks...")
     if os.path.exists(TASKS_FILE):
@@ -21,67 +24,87 @@ def load_tasks():
         except (json.JSONDecodeError, IOError) as e:
             print(f"Error loading tasks.json: {e}. Starting fresh.")
             return [], []
-        if isinstance(data, list):  # Old list format
-            active_tasks = []
-            done_tasks = []
-            for task_data in data:
-                if len(task_data) == 5:
-                    task_tuple = (task_data[0], task_data[1], task_data[2], task_data[3], task_data[4], "Unknown")
-                elif len(task_data) == 4:
-                    task_tuple = (task_data[0], task_data[1], task_data[2], task_data[3], datetime.now().isoformat(), "Unknown")
-                elif len(task_data) == 3:
-                    task_tuple = (task_data[0], task_data[1], task_data[2], False, datetime.now().isoformat(), "Unknown")
-                else:
-                    task_tuple = tuple(task_data)
-                if len(task_tuple) == 6 and task_tuple[3]:
-                    done_tasks.append(task_tuple)
-                else:
-                    active_tasks.append(task_tuple)
-            print("Tasks parsed (old format)")
-            return active_tasks, done_tasks
+    else:
+        print("No tasks file, starting fresh")
+        return [], []
+    
+    # Handle old list format
+    if isinstance(data, list):
         active_tasks = []
-        done_tasks = data.get('done_tasks', [])
-        for task_data in data.get('active_tasks', []):
+        done_tasks = []
+        for task_data in data:
             if len(task_data) == 5:
-                active_tasks.append((task_data[0], task_data[1], task_data[2], task_data[3], task_data[4], "Unknown"))
+                task_tuple = (task_data[0], task_data[1], task_data[2], task_data[3], task_data[4], "Unknown")
             elif len(task_data) == 4:
-                active_tasks.append((task_data[0], task_data[1], task_data[2], task_data[3], datetime.now().isoformat(), "Unknown"))
+                task_tuple = (task_data[0], task_data[1], task_data[2], task_data[3], datetime.now().isoformat(), "Unknown")
             elif len(task_data) == 3:
-                active_tasks.append((task_data[0], task_data[1], task_data[2], False, datetime.now().isoformat(), "Unknown"))
+                task_tuple = (task_data[0], task_data[1], task_data[2], False, datetime.now().isoformat(), "Unknown")
             else:
-                active_tasks.append(tuple(task_data))
-        for task_data in data.get('done_tasks', []):
-            if len(task_data) == 5:
-                done_tasks.append((task_data[0], task_data[1], task_data[2], task_data[3], task_data[4], "Unknown"))
-            elif len(task_data) == 4:
-                done_tasks.append((task_data[0], task_data[1], task_data[2], task_data[3], datetime.now().isoformat(), "Unknown"))
-            elif len(task_data) == 3:
-                done_tasks.append((task_data[0], task_data[1], task_data[2], True, datetime.now().isoformat(), "Unknown"))
+                task_tuple = tuple(task_data)
+            if len(task_tuple) == 6 and task_tuple[3]:
+                done_tasks.append(task_tuple)
             else:
-                done_tasks.append(tuple(task_data))
-        print("Tasks parsed")
+                active_tasks.append(task_tuple)
+        print("Tasks parsed (old format)")
         return active_tasks, done_tasks
-    print("No tasks file, starting fresh")
-    return [], []
+    
+    # Handle new dictionary format
+    active_tasks = []
+    done_tasks = data.get('done_tasks', [])
+    for task_data in data.get('active_tasks', []):
+        if len(task_data) == 5:
+            active_tasks.append((task_data[0], task_data[1], task_data[2], task_data[3], task_data[4], "Unknown"))
+        elif len(task_data) == 4:
+            active_tasks.append((task_data[0], task_data[1], task_data[2], task_data[3], datetime.now().isoformat(), "Unknown"))
+        elif len(task_data) == 3:
+            active_tasks.append((task_data[0], task_data[1], task_data[2], False, datetime.now().isoformat(), "Unknown"))
+        else:
+            active_tasks.append(tuple(task_data))
+    for task_data in data.get('done_tasks', []):
+        if len(task_data) == 5:
+            done_tasks.append((task_data[0], task_data[1], task_data[2], task_data[3], task_data[4], "Unknown"))
+        elif len(task_data) == 4:
+            done_tasks.append((task_data[0], task_data[1], task_data[2], task_data[3], datetime.now().isoformat(), "Unknown"))
+        elif len(task_data) == 3:
+            done_tasks.append((task_data[0], task_data[1], task_data[2], True, datetime.now().isoformat(), "Unknown"))
+        else:
+            done_tasks.append(tuple(task_data))
+    print("Tasks parsed")
+    return active_tasks, done_tasks
 
+# Function to save tasks to file with error handling
 def save_tasks(active_tasks, done_tasks):
-    with open(TASKS_FILE, 'w') as f:
-        json.dump({'active_tasks': active_tasks, 'done_tasks': done_tasks}, f)
+    try:
+        with open(TASKS_FILE, 'w') as f:
+            json.dump({'active_tasks': active_tasks, 'done_tasks': done_tasks}, f)
+        print("Tasks saved")
+    except IOError as e:
+        print(f"Error saving tasks.json: {e}")
 
+# Function to load invite data from file with error handling
 def load_invite_data():
     print("Loading invite data...")
     if os.path.exists(INVITE_FILE):
-        with open(INVITE_FILE, 'r') as f:
-            data = json.load(f)
-        print("Invite data read")
-        return data.get('code', None), data.get('owner_source', "Unknown"), data.get('invitee_source', "Unknown")
+        try:
+            with open(INVITE_FILE, 'r') as f:
+                data = json.load(f)
+            print("Invite data read")
+            return data.get('code', None), data.get('owner_source', "Unknown"), data.get('invitee_source', "Unknown")
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Error loading invite.json: {e}. Starting fresh.")
     print("No invite file")
     return None, "Unknown", "Unknown"
 
+# Function to save invite data to file with error handling
 def save_invite_data(code, owner_source, invitee_source):
-    with open(INVITE_FILE, 'w') as f:
-        json.dump({'code': code, 'owner_source': owner_source, 'invitee_source': invitee_source}, f)
+    try:
+        with open(INVITE_FILE, 'w') as f:
+            json.dump({'code': code, 'owner_source': owner_source, 'invitee_source': invitee_source}, f)
+        print("Invite data saved")
+    except IOError as e:
+        print(f"Error saving invite.json: {e}")
 
+# Function to update task priorities based on age
 def update_priorities(tasks):
     now = datetime.now()
     updated_tasks = []
@@ -94,6 +117,7 @@ def update_priorities(tasks):
         updated_tasks.append((task, new_priority, est_time, completed, created_at, source))
     return updated_tasks
 
+# Initialize global variables
 print("Starting initialization...")
 active_tasks, done_tasks = load_tasks()
 print("Tasks loaded")
@@ -106,12 +130,14 @@ if not invite_code:
     save_invite_data(invite_code, owner_source, invitee_source)
     print("New invite data saved")
 
+# Train initial Linear Regression model with default data
 default_X = np.array([[1], [2], [3], [4], [5]])
 default_y = np.array([15, 30, 45, 60, 90])
 model = LinearRegression()
 model.fit(default_X, default_y)
 print("Model trained")
 
+# Home route for task management
 @app.route('/', methods=['GET', 'POST'])
 def home():
     global active_tasks, done_tasks, model, invite_code, owner_source, invitee_source
@@ -158,6 +184,7 @@ def home():
                    for i, t in enumerate(done_tasks)]
     return render_template('index.html', active_tasks=sorted_active, done_tasks=sorted_done, invite_code=invite_code, owner_source=owner_source, message=message)
 
+# Route for adding tasks with invite code
 @app.route('/add/<code>', methods=['GET', 'POST'])
 def add_task(code):
     global active_tasks, done_tasks, model, invite_code, invitee_source
@@ -185,6 +212,7 @@ def add_task(code):
                    for i, t in enumerate(done_tasks)]
     return render_template('add.html', code=code, active_tasks=sorted_active, done_tasks=sorted_done, invitee_source=invitee_source, message=message)
 
+# Run the app
 if __name__ == "__main__":
     print("Starting server...")
     app.run(host='0.0.0.0', port=5000, debug=True)
