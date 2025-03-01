@@ -28,7 +28,7 @@
         <input type="submit" name="set_source" value="Update Name">
     </form>
     <p>Share this code: <strong>{{ invite_code }}</strong></p>
-    <p>They can add/view at: <a href="http://192.168.0.243:5000/add/{{ invite_code }}">http://192.168.0.243:5000/add/{{ invite_code }}</a></p>
+    <p>They can add/view at: <a href="/add/{{ invite_code }}">/add/{{ invite_code }}</a></p>
     <form method="POST" action="/">
         <input type="submit" name="regenerate" value="Regenerate Invite Code">
     </form>
