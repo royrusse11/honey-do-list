@@ -39,10 +39,12 @@ def load_tasks():
                 done_tasks.append(task_tuple)
             else:
                 active_tasks.append(task_tuple)
+        active_tasks = trim_tasks(active_tasks)
+        done_tasks = trim_tasks(done_tasks)
         print("Tasks parsed (old format)")
         return active_tasks, done_tasks
-    active_tasks = []
-    done_tasks = data.get('done_tasks', [])
+    active_tasks = trim_tasks(data.get('active_tasks', []))
+    done_tasks = trim_tasks(data.get('done_tasks', []))
     for task_data in data.get('active_tasks', []):
         if len(task_data) == 5:
             active_tasks.append((task_data[0], task_data[1], task_data[2], task_data[3], task_data[4], "Unknown"))
@@ -50,8 +52,6 @@ def load_tasks():
             active_tasks.append((task_data[0], task_data[1], task_data[2], task_data[3], datetime.now().isoformat(), "Unknown"))
         elif len(task_data) == 3:
             active_tasks.append((task_data[0], task_data[1], task_data[2], False, datetime.now().isoformat(), "Unknown"))
-        else:
-            active_tasks.append(tuple(task_data))
     for task_data in data.get('done_tasks', []):
         if len(task_data) == 5:
             done_tasks.append((task_data[0], task_data[1], task_data[2], task_data[3], task_data[4], "Unknown"))
@@ -59,10 +59,13 @@ def load_tasks():
             done_tasks.append((task_data[0], task_data[1], task_data[2], task_data[3], datetime.now().isoformat(), "Unknown"))
         elif len(task_data) == 3:
             done_tasks.append((task_data[0], task_data[1], task_data[2], True, datetime.now().isoformat(), "Unknown"))
-        else:
-            done_tasks.append(tuple(task_data))
+    active_tasks = trim_tasks(active_tasks)
+    done_tasks = trim_tasks(done_tasks)
     print("Tasks parsed")
     return active_tasks, done_tasks
+
+def trim_tasks(tasks, max_size=50):
+    return tasks[-max_size:] if len(tasks) > max_size else tasks
 
 def save_tasks(active_tasks, done_tasks):
     try:
@@ -127,6 +130,7 @@ def home():
             priority = int(request.form['priority'])
             est_time = int(request.form['est_time'])
             active_tasks.append((task, priority, est_time, False, datetime.now().isoformat(), owner_source))
+            active_tasks = trim_tasks(active_tasks)
             save_tasks(active_tasks, done_tasks)
             message = "Task added successfully!"
         elif 'toggle' in request.form:
@@ -134,6 +138,7 @@ def home():
             task, priority, est_time, completed, created_at, source = active_tasks[index]
             if not completed:
                 done_tasks.append((task, priority, est_time, True, created_at, source))
+                done_tasks = trim_tasks(done_tasks)
                 del active_tasks[index]
             save_tasks(active_tasks, done_tasks)
         elif 'regenerate' in request.form:
@@ -148,11 +153,11 @@ def home():
     save_tasks(active_tasks, done_tasks)
     sorted_active = []
     for i, (task, priority, est_time, completed, created_at, source) in enumerate(active_tasks):
-        pred_time = est_time  # Use est_time instead of ML prediction
+        pred_time = est_time  # No ML, use est_time
         sorted_active.append((task, priority, est_time, pred_time, completed, i, created_at, source))
     sorted_active.sort(key=lambda x: -x[1])
     sorted_done = [(t[0], t[1], t[2], t[2], t[3], i, t[4], t[5]) 
-                   for i, t in enumerate(done_tasks)]  # Use est_time for done tasks
+                   for i, t in enumerate(done_tasks)]
     return render_template('index.html', active_tasks=sorted_active, done_tasks=sorted_done, invite_code=invite_code, owner_source=owner_source, message=message)
 
 @app.route('/add/<code>', methods=['GET', 'POST'])
@@ -167,6 +172,7 @@ def add_task(code):
             priority = int(request.form['priority'])
             est_time = int(request.form['est_time'])
             active_tasks.append((task, priority, est_time, False, datetime.now().isoformat(), invitee_source))
+            active_tasks = trim_tasks(active_tasks)
             save_tasks(active_tasks, done_tasks)
             message = "Task added successfully!"
         elif 'set_source' in request.form:
@@ -175,7 +181,7 @@ def add_task(code):
             message = "Source name updated!"
     sorted_active = []
     for i, (task, priority, est_time, completed, created_at, source) in enumerate(active_tasks):
-        pred_time = est_time  # Use est_time instead of ML prediction
+        pred_time = est_time  # No ML, use est_time
         sorted_active.append((task, priority, est_time, pred_time, completed, i, created_at, source))
     sorted_active.sort(key=lambda x: -x[1])
     sorted_done = [(t[0], t[1], t[2], t[2], t[3], i, t[4], t[5]) 
