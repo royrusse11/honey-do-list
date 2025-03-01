@@ -1,8 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 import json
 import os
-from sklearn.linear_model import LinearRegression
-import numpy as np
 from datetime import datetime, timedelta
 import uuid
 
@@ -119,15 +117,9 @@ if not invite_code:
     save_invite_data(invite_code, owner_source, invitee_source)
     print("New invite data saved")
 
-default_X = np.array([[1], [2], [3], [4], [5]])
-default_y = np.array([15, 30, 45, 60, 90])
-model = LinearRegression()
-model.fit(default_X, default_y)
-print("Model trained")
-
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    global active_tasks, done_tasks, model, invite_code, owner_source, invitee_source
+    global active_tasks, done_tasks, invite_code, owner_source, invitee_source
     message = None
     if request.method == 'POST':
         if 'task' in request.form:
@@ -152,29 +144,20 @@ def home():
             owner_source = request.form['source'] or "Unknown"
             save_invite_data(invite_code, owner_source, invitee_source)
             message = "Source name updated!"
-        # Commented out retraining to reduce memory usage
-        # if len(active_tasks) >= 5:
-        #     X_train = np.array([[t[1]] for t in active_tasks])
-        #     y_train = np.array([t[2] for t in active_tasks])
-        #     temp_model = LinearRegression()
-        #     temp_model.fit(X_train, y_train)
-        #     r2 = temp_model.score(X_train, y_train)
-        #     if r2 > 0.5:
-        #         model = temp_model
     active_tasks = update_priorities(active_tasks)
     save_tasks(active_tasks, done_tasks)
     sorted_active = []
     for i, (task, priority, est_time, completed, created_at, source) in enumerate(active_tasks):
-        pred_time = model.predict(np.array([[priority]]))[0]
+        pred_time = est_time  # Use est_time instead of ML prediction
         sorted_active.append((task, priority, est_time, pred_time, completed, i, created_at, source))
     sorted_active.sort(key=lambda x: -x[1])
-    sorted_done = [(t[0], t[1], t[2], model.predict(np.array([[t[1]]]))[0], t[3], i, t[4], t[5]) 
-                   for i, t in enumerate(done_tasks)]
+    sorted_done = [(t[0], t[1], t[2], t[2], t[3], i, t[4], t[5]) 
+                   for i, t in enumerate(done_tasks)]  # Use est_time for done tasks
     return render_template('index.html', active_tasks=sorted_active, done_tasks=sorted_done, invite_code=invite_code, owner_source=owner_source, message=message)
 
 @app.route('/add/<code>', methods=['GET', 'POST'])
 def add_task(code):
-    global active_tasks, done_tasks, model, invite_code, invitee_source
+    global active_tasks, done_tasks, invite_code, invitee_source
     if code != invite_code:
         return "Invalid invite code", 403
     message = None
@@ -190,21 +173,12 @@ def add_task(code):
             invitee_source = request.form['source'] or "Unknown"
             save_invite_data(invite_code, owner_source, invitee_source)
             message = "Source name updated!"
-        # Commented out retraining to reduce memory usage
-        # if len(active_tasks) >= 5:
-        #     X_train = np.array([[t[1]] for t in active_tasks])
-        #     y_train = np.array([t[2] for t in active_tasks])
-        #     temp_model = LinearRegression()
-        #     temp_model.fit(X_train, y_train)
-        #     r2 = temp_model.score(X_train, y_train)
-        #     if r2 > 0.5:
-        #         model = temp_model
     sorted_active = []
     for i, (task, priority, est_time, completed, created_at, source) in enumerate(active_tasks):
-        pred_time = model.predict(np.array([[priority]]))[0]
+        pred_time = est_time  # Use est_time instead of ML prediction
         sorted_active.append((task, priority, est_time, pred_time, completed, i, created_at, source))
     sorted_active.sort(key=lambda x: -x[1])
-    sorted_done = [(t[0], t[1], t[2], model.predict(np.array([[t[1]]]))[0], t[3], i, t[4], t[5]) 
+    sorted_done = [(t[0], t[1], t[2], t[2], t[3], i, t[4], t[5]) 
                    for i, t in enumerate(done_tasks)]
     return render_template('add.html', code=code, active_tasks=sorted_active, done_tasks=sorted_done, invitee_source=invitee_source, message=message)
 
