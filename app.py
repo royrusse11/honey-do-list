@@ -68,12 +68,15 @@ def trim_tasks(tasks, max_size=50):
     return tasks[-max_size:] if len(tasks) > max_size else tasks
 
 def save_tasks(active_tasks, done_tasks):
+    data = {'active_tasks': active_tasks, 'done_tasks': done_tasks}
     try:
+        os.makedirs(os.path.dirname(TASKS_FILE), exist_ok=True)
         with open(TASKS_FILE, 'w') as f:
-            json.dump({'active_tasks': active_tasks, 'done_tasks': done_tasks}, f)
+            json.dump(data, f)
         print("Tasks saved")
-    except IOError as e:
-        print(f"Error saving tasks.json: {e}")
+    except (IOError, OSError) as e:
+        print(f"Error saving tasks.json: {e}. Using in-memory data.")
+        return data
 
 def load_invite_data():
     print("Loading invite data...")
@@ -89,12 +92,15 @@ def load_invite_data():
     return None, "Unknown", "Unknown"
 
 def save_invite_data(code, owner_source, invitee_source):
+    data = {'code': code, 'owner_source': owner_source, 'invitee_source': invitee_source}
     try:
+        os.makedirs(os.path.dirname(INVITE_FILE), exist_ok=True)
         with open(INVITE_FILE, 'w') as f:
-            json.dump({'code': code, 'owner_source': owner_source, 'invitee_source': invitee_source}, f)
+            json.dump(data, f)
         print("Invite data saved")
-    except IOError as e:
-        print(f"Error saving invite.json: {e}")
+    except (IOError, OSError) as e:
+        print(f"Error saving invite.json: {e}. Using in-memory data.")
+        return data
 
 def update_priorities(tasks):
     now = datetime.now()
@@ -153,10 +159,10 @@ def home():
     save_tasks(active_tasks, done_tasks)
     sorted_active = []
     for i, (task, priority, est_time, completed, created_at, source) in enumerate(active_tasks):
-        pred_time = model.predict(np.array([[priority]]))[0]
+        pred_time = est_time  # No ML, use est_time
         sorted_active.append((task, priority, est_time, pred_time, completed, i, created_at, source))
     sorted_active.sort(key=lambda x: -x[1])
-    sorted_done = [(t[0], t[1], t[2], model.predict(np.array([[t[1]]]))[0], t[3], i, t[4], t[5]) 
+    sorted_done = [(t[0], t[1], t[2], t[2], t[3], i, t[4], t[5]) 
                    for i, t in enumerate(done_tasks)]
     return render_template('index.html', active_tasks=sorted_active, done_tasks=sorted_done, invite_code=invite_code, owner_source=owner_source, message=message)
 
@@ -181,7 +187,7 @@ def add_task(code):
             message = "Source name updated!"
     sorted_active = []
     for i, (task, priority, est_time, completed, created_at, source) in enumerate(active_tasks):
-        pred_time = model.predict(np.array([[priority]]))[0]
+        pred_time = est_time  # No ML, use est_time
         sorted_active.append((task, priority, est_time, pred_time, completed, i, created_at, source))
     sorted_active.sort(key=lambda x: -x[1])
     sorted_done = [(t[0], t[1], t[2], t[2], t[3], i, t[4], t[5]) 
@@ -189,5 +195,5 @@ def add_task(code):
     return render_template('add.html', code=code, active_tasks=sorted_active, done_tasks=sorted_done, invitee_source=invitee_source, message=message)
 
 if __name__ == "__main__":
-    print("Starting server...")
-    app.run(host='0.0.0.0', port=PORT, debug=True)
+    print(f"Starting server on port {PORT}...")
+    app.run(host='0.0.0.0', port=PORT, debug=False)
