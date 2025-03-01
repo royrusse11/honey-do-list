@@ -153,10 +153,10 @@ def home():
     save_tasks(active_tasks, done_tasks)
     sorted_active = []
     for i, (task, priority, est_time, completed, created_at, source) in enumerate(active_tasks):
-        pred_time = est_time  # No ML, use est_time
+        pred_time = model.predict(np.array([[priority]]))[0]
         sorted_active.append((task, priority, est_time, pred_time, completed, i, created_at, source))
     sorted_active.sort(key=lambda x: -x[1])
-    sorted_done = [(t[0], t[1], t[2], t[2], t[3], i, t[4], t[5]) 
+    sorted_done = [(t[0], t[1], t[2], model.predict(np.array([[t[1]]]))[0], t[3], i, t[4], t[5]) 
                    for i, t in enumerate(done_tasks)]
     return render_template('index.html', active_tasks=sorted_active, done_tasks=sorted_done, invite_code=invite_code, owner_source=owner_source, message=message)
 
@@ -181,7 +181,7 @@ def add_task(code):
             message = "Source name updated!"
     sorted_active = []
     for i, (task, priority, est_time, completed, created_at, source) in enumerate(active_tasks):
-        pred_time = est_time  # No ML, use est_time
+        pred_time = model.predict(np.array([[priority]]))[0]
         sorted_active.append((task, priority, est_time, pred_time, completed, i, created_at, source))
     sorted_active.sort(key=lambda x: -x[1])
     sorted_done = [(t[0], t[1], t[2], t[2], t[3], i, t[4], t[5]) 
@@ -189,5 +189,5 @@ def add_task(code):
     return render_template('add.html', code=code, active_tasks=sorted_active, done_tasks=sorted_done, invitee_source=invitee_source, message=message)
 
 if __name__ == "__main__":
-    print(f"Starting server on port {PORT}...")
-    app.run(host='0.0.0.0', port=PORT, debug=False)
+    print("Starting server...")
+    app.run(host='0.0.0.0', port=PORT, debug=True)
