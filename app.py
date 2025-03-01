@@ -8,9 +8,8 @@ import uuid
 
 app = Flask(__name__)
 
-# Use environment variable for port and safer file paths
-PORT = int(os.environ.get('PORT', 5000))  # Render sets PORT, default to 5000 locally
-TASKS_FILE = os.path.join(os.getcwd(), 'tasks.json')  # Use current dir, not /app/data
+PORT = int(os.environ.get('PORT', 5000))
+TASKS_FILE = os.path.join(os.getcwd(), 'tasks.json')
 INVITE_FILE = os.path.join(os.getcwd(), 'invite.json')
 
 def load_tasks():
@@ -153,14 +152,15 @@ def home():
             owner_source = request.form['source'] or "Unknown"
             save_invite_data(invite_code, owner_source, invitee_source)
             message = "Source name updated!"
-        if len(active_tasks) >= 5:
-            X_train = np.array([[t[1]] for t in active_tasks])
-            y_train = np.array([t[2] for t in active_tasks])
-            temp_model = LinearRegression()
-            temp_model.fit(X_train, y_train)
-            r2 = temp_model.score(X_train, y_train)
-            if r2 > 0.5:
-                model = temp_model
+        # Commented out retraining to reduce memory usage
+        # if len(active_tasks) >= 5:
+        #     X_train = np.array([[t[1]] for t in active_tasks])
+        #     y_train = np.array([t[2] for t in active_tasks])
+        #     temp_model = LinearRegression()
+        #     temp_model.fit(X_train, y_train)
+        #     r2 = temp_model.score(X_train, y_train)
+        #     if r2 > 0.5:
+        #         model = temp_model
     active_tasks = update_priorities(active_tasks)
     save_tasks(active_tasks, done_tasks)
     sorted_active = []
@@ -190,6 +190,15 @@ def add_task(code):
             invitee_source = request.form['source'] or "Unknown"
             save_invite_data(invite_code, owner_source, invitee_source)
             message = "Source name updated!"
+        # Commented out retraining to reduce memory usage
+        # if len(active_tasks) >= 5:
+        #     X_train = np.array([[t[1]] for t in active_tasks])
+        #     y_train = np.array([t[2] for t in active_tasks])
+        #     temp_model = LinearRegression()
+        #     temp_model.fit(X_train, y_train)
+        #     r2 = temp_model.score(X_train, y_train)
+        #     if r2 > 0.5:
+        #         model = temp_model
     sorted_active = []
     for i, (task, priority, est_time, completed, created_at, source) in enumerate(active_tasks):
         pred_time = model.predict(np.array([[priority]]))[0]
@@ -200,5 +209,5 @@ def add_task(code):
     return render_template('add.html', code=code, active_tasks=sorted_active, done_tasks=sorted_done, invitee_source=invitee_source, message=message)
 
 if __name__ == "__main__":
-    print("Starting server...")
-    app.run(host='0.0.0.0', port=PORT, debug=True)
+    print(f"Starting server on port {PORT}...")
+    app.run(host='0.0.0.0', port=PORT, debug=False)
